@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Breach Investigator: The Smart Camera Audio Surveillance</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap');
+
+        :root {
+            --primary-color: #00ff9d;
+            --background-color: #1a1a1a;
+            --surface-color: #252525;
+            --text-color: #f0f0f0;
+            --danger-color: #ff4d4d;
+            --warning-color: #ffd700;
+        }
+
+        body {
+            font-family: 'Roboto Mono', monospace;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        #main-wrapper {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+            max-width: 1600px;
+            width: 100%;
+        }
+
+        #left-panel {
+            width: 300px;
+            background-color: var(--surface-color);
+            border: 2px solid #444;
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 380px;
+        }
+
+        #right-panel {
+            width: 300px;
+            background-color: #0a0a0a;
+            border: 2px solid #333;
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
+            height: 380px;
+            overflow: hidden;
+        }
+
+        #cli-interface {
+            background-color: #000;
+            color: var(--primary-color);
+            padding: 15px;
+            border-radius: 5px;
+            height: calc(100% - 30px);
+            overflow-y: auto;
+            font-size: 0.8rem;
+            line-height: 1.4;
+        }
+
+        #cli-interface::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #cli-interface::-webkit-scrollbar-track {
+            background: #1a1a1a;
+            border-radius: 4px;
+        }
+
+        #cli-interface::-webkit-scrollbar-thumb {
+            background: var(--primary-color);
+            border-radius: 4px;
+        }
+
+        #cli-interface::-webkit-scrollbar-thumb:hover {
+            background: #00cc7a;
+        }
+
+        .cli-header {
+            color: #888;
+            font-size: 0.7rem;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 5px;
+        }
+
+        .cli-output {
+            margin: 10px 0;
+        }
+
+        .cli-prompt {
+            color: var(--warning-color);
+        }
+
+        .cli-command {
+            color: #66d9ef;
+        }
+
+        .cli-success {
+            color: var(--primary-color);
+        }
+
+        .cli-warning {
+            color: var(--warning-color);
+        }
+
+        .cli-error {
+            color: var(--danger-color);
+        }
+
+        #game-container {
+            width: 100%;
+            max-width: 800px;
+            background-color: var(--surface-color);
+            border: 2px solid #444;
+            border-radius: 8px;
+            padding: 2rem;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            position: relative;
+            height: 348px;
+            overflow-y: auto;
+        }
+
+        #score-display {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            font-size: 0.8rem;
+            color: var(--primary-color);
+            background-color: #333;
+            padding: 5px 15px;
+            border-radius: 5px;
+            border: 1px solid var(--primary-color);
+        }
+
+        #progress-indicator {
+            width: 100%;
+            max-width: 1560px;
+            margin-left: -24px;
+            height: 50px;
+            background-color: #333;
+            border: 1px solid #444;
+            border-radius: 5px;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .progress-stage {
+            flex: 1;
+            height: 20px;
+            background-color: #222;
+            border: 1px solid #444;
+            border-radius: 3px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .progress-stage.completed-optimal {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 5px rgba(0, 255, 157, 0.3);
+        }
+
+        .progress-stage.completed-second-attempt {
+            background-color: #FFD700;
+            /* Gold/Yellow for second attempt */
+            border-color: #FFD700;
+            box-shadow: 0 0 5px rgba(255, 215, 0, 0.5);
+        }
+
+        .progress-stage.completed-suboptimal {
+            background-color: #FF8C00;
+            /* Dark Orange for third+ attempts */
+            border-color: #FF8C00;
+            box-shadow: 0 0 5px rgba(255, 140, 0, 0.5);
+        }
+
+        .progress-stage.current {
+            background-color: #555;
+            border-color: var(--primary-color);
+            animation: pulse 2s infinite;
+        }
+
+        .progress-stage.failed {
+            background-color: var(--danger-color);
+            border-color: var(--danger-color);
+            box-shadow: 0 0 8px rgba(255, 77, 77, 0.5);
+            animation: flashRed 1s ease-in-out;
+        }
+
+        @keyframes flashRed {
+
+            0%,
+            100% {
+                box-shadow: 0 0 8px rgba(255, 77, 77, 0.5);
+            }
+
+            50% {
+                box-shadow: 0 0 15px rgba(255, 77, 77, 0.8);
+            }
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.6;
+            }
+        }
+
+        #game-title {
+            text-align: center;
+            color: var(--primary-color);
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-shadow: 0 0 10px rgba(0, 255, 157, 0.3);
+        }
+
+        #stage-labels {
+            display: flex;
+            align-items: flex-start;
+            margin: 0 0 20px 0;
+            color: #888;
+            max-width: 1560px;
+            margin-left: -24px;
+            width: 100%;
+        }
+
+        .stage-label {
+            flex: 1;
+            text-align: center;
+            font-size: 0.75rem;
+            line-height: 1.2;
+            padding: 0 2px;
+            border-left: 1px dashed white;
+        }
+
+        .stage-label {
+            border-right: 1px dashed white;
+        }
+
+        .scene {
+            display: none;
+            opacity: 0;
+            transform: translateX(0);
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+        }
+
+        .scene.active {
+            display: block;
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .scene.transitioning-out {
+            opacity: 0;
+            transform: translateX(-20px);
+        }
+
+        .scene.transitioning-in {
+            opacity: 0;
+            transform: translateX(20px);
+        }
+
+        h1,
+        h2 {
+            color: var(--primary-color);
+            text-align: center;
+            border-bottom: 1px solid var(--primary-color);
+            padding-bottom: 10px;
+            margin-top: 0;
+        }
+
+        p,
+        .feedback {
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        .story-text {
+            background-color: #333;
+            border-left: 4px solid var(--primary-color);
+            padding: 15px;
+            border-radius: 4px;
+        }
+
+        .choices {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        button {
+            font-family: 'Roboto Mono', monospace;
+            background-color: #333;
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+            padding: 15px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        button i {
+            width: 20px;
+            text-align: center;
+        }
+
+        button:hover {
+            background-color: var(--primary-color);
+            color: var(--background-color);
+            box-shadow: 0 0 10px rgba(0, 255, 157, 0.5);
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            animation: fadeIn 0.3s;
+        }
+
+        .modal-content {
+            background-color: var(--surface-color);
+            padding: 30px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+            border-top: 5px solid var(--primary-color);
+            position: relative;
+            animation: slideIn 0.3s;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content.incorrect-modal {
+            border-top-color: var(--danger-color);
+        }
+
+        .modal-content.incorrect-modal h3 {
+            color: var(--danger-color);
+        }
+
+        .modal-content.hint-modal {
+            border-top-color: var(--warning-color);
+        }
+
+        .modal-content.hint-modal h3 {
+            color: var(--warning-color);
+        }
+
+        .modal-content h3 {
+            font-size: 1.5rem;
+            margin-top: 0;
+        }
+
+        .modal-content button {
+            width: 100%;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .scene-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            border: 1px solid #444;
+            background-color: #000;
+            max-height: 400px;
+            object-fit: cover;
+        }
+
+        #current-image {
+            width: 100%;
+            text-align: center;
+        }
+
+        #current-image img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            border: 1px solid #444;
+            background-color: #000;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        #footer {
+            margin-top: 50px;
+            padding: 20px;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #888;
+            border-top: 1px solid #444;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        #footer a {
+            color: var(--primary-color);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        #footer a:hover {
+            color: var(--warning-color);
+            text-decoration: underline;
+        }
+
+        .footer-line {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <h1 id="game-title">Acme TechCorp Inc. IoT Security Incident</h1>
+
+    <div id="progress-indicator">
+        <div class="progress-stage current" data-stage="initial" title="Initial Alert"></div>
+        <div class="progress-stage" data-stage="response" title="Immediate Response"></div>
+        <div class="progress-stage" data-stage="forensics" title="Digital Forensics"></div>
+        <div class="progress-stage" data-stage="scope" title="Scope Assessment"></div>
+        <div class="progress-stage" data-stage="intelligence" title="Threat Intelligence"></div>
+        <div class="progress-stage" data-stage="escalation" title="Incident Escalation"></div>
+        <div class="progress-stage" data-stage="containment" title="Advanced Containment"></div>
+        <div class="progress-stage" data-stage="eradication" title="Eradication & Recovery"></div>
+        <div class="progress-stage" data-stage="prevention" title="Prevention Strategy"></div>
+        <div class="progress-stage" data-stage="report" title="Executive Summary"></div>
+    </div>
+
+    <div id="stage-labels">
+        <div class="stage-label">Initial<br>Alert</div>
+        <div class="stage-label">Immediate<br>Response</div>
+        <div class="stage-label">Digital<br>Forensics</div>
+        <div class="stage-label">Scope<br>Assessment</div>
+        <div class="stage-label">Threat<br>Intelligence</div>
+        <div class="stage-label">Incident<br>Escalation</div>
+        <div class="stage-label">Advanced<br>Containment</div>
+        <div class="stage-label">Eradication<br>& Recovery</div>
+        <div class="stage-label">Prevention<br>Strategy</div>
+        <div class="stage-label stage-label-last">Executive<br>Summary</div>
+    </div>
+
+    <div id="main-wrapper">
+        <div id="left-panel">
+            <div id="current-image">
+                <img src="images/FloraSmartIoT_1.png" alt="Current scene visualization" class="scene-image">
+            </div>
+        </div>
+
+        <div id="game-container">
+            <div id="score-display">Score: 0</div>
+
+            <div id="scene_intro" class="scene active">
+                <p class="story-text">2:47 AM - Your phone buzzes with a critical security alert. You're the lead
+                    Security
+                    Analyst at Acme TechCorp Inc. Multiple IoT devices across the company are exhibiting unusual
+                    behavior,
+                    and there are reports of suspicious network traffic. This could be the beginning of a coordinated
+                    cyber
+                    attack. Your decisions in the next few hours could determine whether the company survives this
+                    incident.
+                </p>
+                <div class="choices"><button onclick="showScene('scene_initial_alert')"><i class="fa-solid fa-play"></i>
+                        Respond to Alert</button></div>
+            </div>
+
+            <div id="scene_initial_alert" class="scene">
+                <h2>Step 1: Initial Alert Assessment</h2>
+                <p>The SOC team shows you three simultaneous alerts. Which should you prioritize FIRST?</p>
+                <div class="choices">
+                    <button onclick="handleChoice('initial', 'wrong1')"><i class="fa-solid fa-wifi"></i> 50 smart light
+                        bulbs making suspicious DNS requests to unknown international domains</button>
+                    <button onclick="handleChoice('initial', 'correct')"><i class="fa-solid fa-server"></i> Executive
+                        conference room smart camera with voice control microphone communicating with hostile
+                        nation</button>
+                    <button onclick="handleChoice('initial', 'wrong2')"><i class="fa-solid fa-camera"></i> Security
+                        cameras in the main lobby showing unexplained elevated CPU usage patterns</button>
+                </div>
+            </div>
+
+            <div id="scene_immediate_response" class="scene">
+                <h2>Step 2: Immediate Response</h2>
+                <p>The executive conference room houses sensitive discussions about mergers and acquisitions. The smart
+                    camera has a built-in microphone for voice commands - "Hey Camera, start recording the meeting" -
+                    but it's been hijacked to listen to every confidential conversation! What's
+                    your
+                    IMMEDIATE action?</p>
+                <div class="choices">
+                    <button onclick="handleChoice('response', 'wrong1')"><i class="fa-solid fa-power-off"></i>
+                        Physically disconnect the smart camera immediately to stop ongoing audio transmission</button>
+                    <button onclick="handleChoice('response', 'correct')"><i class="fa-solid fa-ethernet"></i> Isolate
+                        device to secure monitoring VLAN while preserving all forensic evidence</button>
+                    <button onclick="handleChoice('response', 'wrong2')"><i class="fa-solid fa-shield-halved"></i> Block
+                        all smart camera network traffic at the perimeter firewall level immediately</button>
+                </div>
+            </div>
+
+            <div id="scene_forensic_analysis" class="scene">
+                <h2>Step 3: Digital Forensics</h2>
+                <p>With the device isolated, you begin forensic analysis. The smart camera's microphone has been
+                    compromised and is actively recording conversations. The device logs show three potential attack
+                    vectors. Which one indicates the highest level of attacker resources and planning (i.e., a
+                    nation-state threat)?</p>
+                <div class="choices">
+                    <button onclick="handleChoice('forensics', 'good1')"><i class="fa-solid fa-key"></i> Brute force
+                        credential attack targeting default administrative login credentials</button>
+                    <button onclick="handleChoice('forensics', 'correct')"><i class="fa-solid fa-bug"></i> Exploitation
+                        of zero-day firmware vulnerability that enabled unauthorized microphone access</button>
+                    <button onclick="handleChoice('forensics', 'good2')"><i class="fa-solid fa-network-wired"></i>
+                        Man-in-the-middle interception attack executed during scheduled firmware update process</button>
+                </div>
+            </div>
+
+            <div id="scene_scope_assessment" class="scene">
+                <h2>Step 4: Scope Assessment</h2>
+                <p>Your analysis reveals this is a zero-day exploit specifically designed to compromise
+                    microphone-enabled IoT devices. You need to determine the scope of potential audio surveillance.
+                    What's
+                    your next move?</p>
+                <div class="choices">
+                    <button onclick="handleChoice('scope', 'wrong1')"><i class="fa-solid fa-building"></i> Check only
+                        other smart cameras from the same manufacturer for similar compromise</button>
+                    <button onclick="handleChoice('scope', 'correct')"><i class="fa-solid fa-network-wired"></i> Scan
+                        entire network for IoT devices with microphone capabilities and suspicious patterns</button>
+                    <button onclick="handleChoice('scope', 'wrong2')"><i class="fa-solid fa-clock"></i> Wait for
+                        additional security alerts before expanding the investigation scope further</button>
+                </div>
+            </div>
+
+            <div id="scene_threat_intelligence" class="scene">
+                <h2>Step 5: Threat Intelligence</h2>
+                <p>Your network scan reveals 23 compromised devices with microphone capabilities! This zero-day exploit
+                    is specifically targeting audio surveillance across multiple IoT device types. You need to identify
+                    the threat actor. Which
+                    intelligence source will give you the FASTEST actionable intelligence?</p>
+                <div class="choices">
+                    <button onclick="handleChoice('intelligence', 'good1')"><i class="fa-solid fa-globe"></i> Public CVE
+                        database search for similar vulnerabilities and known attack patterns</button>
+                    <button onclick="handleChoice('intelligence', 'correct')"><i class="fa-solid fa-users"></i> Query
+                        industry threat intelligence sharing platform for real-time attribution data</button>
+                    <button onclick="handleChoice('intelligence', 'good2')"><i class="fa-solid fa-magnifying-glass"></i>
+                        Reverse engineer the malware payload through detailed technical analysis</button>
+                </div>
+            </div>
+
+            <div id="scene_incident_escalation" class="scene">
+                <h2>Step 6: Incident Escalation</h2>
+                <p>Threat intel reveals this is the "ThermalSnake" backdoor - a sophisticated IoT malware deployed by
+                    nation-state actors targeting corporate espionage.
+                    You
+                    must brief the C-Suite. What's your PRIMARY recommendation?</p>
+                <div class="choices">
+                    <button onclick="handleChoice('escalation', 'wrong1')"><i class="fa-solid fa-microchip"></i> Replace
+                        all IoT devices immediately to prevent any further system compromise</button>
+                    <button onclick="handleChoice('escalation', 'wrong2')"><i class="fa-solid fa-eye-slash"></i> Keep
+                        incident internal to avoid damaging company reputation and stock price</button>
+                    <button onclick="handleChoice('escalation', 'correct')"><i class="fa-solid fa-gavel"></i> Engage
+                        legal team and prepare for potential regulatory reporting requirements</button>
+                </div>
+            </div>
+
+            <div id="scene_containment_strategy" class="scene">
+                <h2>Step 7: Advanced Containment</h2>
+                <p>Legal approves a controlled response. You have 23 compromised devices still potentially exfiltrating
+                    data. What's your containment strategy?</p>
+                <div class="choices">
+                    <button onclick="handleChoice('containment', 'wrong1')"><i class="fa-solid fa-ban"></i> Immediately
+                        block all IoT device internet access to stop data exfiltration</button>
+                    <button onclick="handleChoice('containment', 'correct')"><i class="fa-solid fa-chess"></i> Deploy
+                        honeypot to monitor attacker behavior while isolating critical systems</button>
+                    <button onclick="handleChoice('containment', 'wrong2')"><i class="fa-solid fa-wifi"></i> Reset all
+                        IoT devices to factory defaults to remove malicious software</button>
+                </div>
+            </div>
+
+            <div id="scene_eradication" class="scene">
+                <h2>Step 8: Eradication & Recovery</h2>
+                <p>Your honeypot reveals the attackers are still active and have discovered 3 additional entry points.
+                    What's your eradication approach?</p>
+                <div class="choices">
+                    <button onclick="handleChoice('eradication', 'wrong1')"><i class="fa-solid fa-broom"></i> Clean
+                        infections one device at a time to minimize business disruption</button>
+                    <button onclick="handleChoice('eradication', 'correct')"><i class="fa-solid fa-stopwatch"></i>
+                        Coordinate simultaneous cleanup across all infected systems and entry points</button>
+                    <button onclick="handleChoice('eradication', 'wrong2')"><i class="fa-solid fa-server"></i> Take
+                        entire corporate network offline until threat is completely eliminated</button>
+                </div>
+            </div>
+
+            <div id="scene_lessons_learned" class="scene">
+                <h2>Step 9: Lessons Learned & Prevention</h2>
+                <p>The immediate threat is neutralized, but you need to prevent this from happening again. What's the
+                    MOST
+                    effective long-term solution?</p>
+                <div class="choices">
+                    <button onclick="handleChoice('prevention', 'wrong1')"><i class="fa-solid fa-shield"></i> Install
+                        advanced endpoint protection software on all corporate IoT devices</button>
+                    <button onclick="handleChoice('prevention', 'wrong2')"><i class="fa-solid fa-user-graduate"></i>
+                        Mandatory cybersecurity training program for all employees and contractors</button>
+                    <button onclick="handleChoice('prevention', 'correct')"><i class="fa-solid fa-clipboard-check"></i>
+                        Establish comprehensive IoT Governance Program with procurement security standards</button>
+                </div>
+            </div>
+
+            <div id="scene_final_report" class="scene">
+                <h2>Step 10: Executive Summary</h2>
+                <p>The CEO wants a final briefing on the incident impact and your performance. How do you frame this
+                    complex
+                    incident?</p>
+                <div class="choices">
+                    <button onclick="handleChoice('report', 'good1')"><i class="fa-solid fa-chart-line"></i> Focus on
+                        technical details of zero-day exploit and nation-state attribution</button>
+                    <button onclick="handleChoice('report', 'correct')"><i class="fa-solid fa-balance-scale"></i>
+                        Present business impact analysis, lessons learned, and strategic security roadmap</button>
+                    <button onclick="handleChoice('report', 'good2')"><i class="fa-solid fa-trophy"></i> Highlight
+                        successful threat neutralization and exceptional team performance metrics</button>
+                </div>
+            </div>
+
+            <div id="scene_conclusion" class="scene">
+                <h1><i class="fa-solid fa-award"></i> Mission Accomplished: Crisis Managed!</h1>
+                <p class="story-text">Congratulations! You successfully handled a nation-state cyber attack against your
+                    organization. Through methodical incident response, threat intelligence, and strategic thinking, you
+                    prevented a major corporate espionage operation involving audio surveillance. Your decisions saved
+                    the company millions in
+                    potential
+                    losses and protected sensitive merger & acquisition conversations from being intercepted.</p>
+                <h2>Your Final Score: <span id="final-score" style="color:var(--primary-color)">0</span>/1000</h2>
+                <h2>Key Cybersecurity Lessons Mastered:</h2>
+                <p><i class="fa-solid fa-crosshairs" style="color:var(--primary-color)"></i><strong>Prioritization is
+                        Key:</strong>
+                    Focus on
+                    high-value targets first; voice-controlled smart cameras in executive areas are ground zero for
+                    audio espionage.</p>
+                <p><i class="fa-solid fa-microscope" style="color:var(--primary-color)"></i> <strong>Preserve the
+                        Evidence:</strong>
+                    Isolate, but don't unplug. Forensic data and cached audio recordings are golden.</p>
+                <p><i class="fa-solid fa-users" style="color:var(--primary-color)"></i> <strong>Leverage Collective
+                        Intel:</strong> Use
+                    industry threat platforms to identify known attackers and their audio surveillance tactics faster.
+                </p>
+                <p><i class="fa-solid fa-chess" style="color:var(--primary-color)"></i> <strong>Strike Fast, Strike
+                        Together:</strong>
+                    Coordinated
+                    actions prevent attackers from adapting to your countermeasures or shifting surveillance methods.
+                </p>
+                <p><i class="fa-solid fa-clipboard-check" style="color:var(--primary-color)"></i>
+                    <strong>Governance Wins Wars:</strong> Long-term
+                    security requires systematic processes for voice-controlled IoT devices, not just reactive measures.
+                </p>
+                <div class="choices">
+                    <button onclick="restartGame()"><i class="fa-solid fa-arrow-rotate-left"></i> Master the Challenge
+                        Again</button>
+                </div>
+            </div>
+
+            <div id="scene_disaster" class="scene">
+                <h2 id="disaster_title"><i class="fa-solid fa-triangle-exclamation"
+                        style="color:var(--danger-color);"></i>
+                    Disaster!</h2>
+                <p id="disaster_text" class="story-text">Disaster message here.</p>
+                <div class="choices"><button id="disaster_button"><i class="fa-solid fa-arrow-rotate-left"></i> Go Back
+                        &
+                        Re-evaluate</button></div>
+            </div>
+        </div>
+
+        <div id="right-panel">
+            <div id="cli-interface">
+                <div class="cli-header">ACME TECHCORP SOC - TERMINAL v2.1.0</div>
+                <div class="cli-output">
+                    <span class="cli-prompt">admin@soc:~$</span> <span class="cli-command">status</span><br>
+                    <span class="cli-success">✓ Security monitoring active</span><br>
+                    <span class="cli-success">✓ Threat detection enabled</span><br>
+                    <span class="cli-info">◉ Standby mode - awaiting instructions</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="modal" class="modal-overlay">
+        <div id="modal-content" class="modal-content">
+            <h3 id="modal-title">Feedback</h3>
+            <p id="modal-message">Message here</p>
+            <button id="modal-close-btn"><i class="fa-solid fa-arrow-right"></i> Continue</button>
+        </div>
+    </div>
+
+    <script>
+        const gameState = {
+            score: 0,
+            currentScene: 'scene_intro',
+            attempts: {},
+            attemptCounts: {}, // Track how many attempts per phase
+            stageResults: {},
+            firstAttemptResults: {},
+            criticalErrors: 0,
+            sceneChoiceOrder: {}, // Track choice order to prevent re-randomization
+            currentStageIndex: 0,
+            stages: ['initial', 'response', 'forensics', 'scope', 'intelligence', 'escalation', 'containment', 'eradication', 'prevention', 'report']
+        };
+
+        const scoreDisplay = document.getElementById('score-display');
+        const modal = document.getElementById('modal');
+        const modalContent = document.getElementById('modal-content');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const modalCloseBtn = document.getElementById('modal-close-btn');
+        const disasterTitle = document.getElementById('disaster_title');
+        const disasterText = document.getElementById('disaster_text');
+        const disasterBtn = document.getElementById('disaster_button');
+
+        function updateProgressIndicator(stage, result) {
+            const stageElement = document.querySelector(`[data-stage="${stage}"]`);
+            if (stageElement) {
+                stageElement.classList.remove('current', 'completed-optimal', 'completed-second-attempt', 'completed-suboptimal', 'failed');
+
+                if (result === 'optimal') {
+                    stageElement.classList.add('completed-optimal');
+                } else if (result === 'second-attempt') {
+                    stageElement.classList.add('completed-second-attempt');
+                } else if (result === 'suboptimal') {
+                    stageElement.classList.add('completed-suboptimal');
+                } else if (result === 'failed') {
+                    stageElement.classList.add('failed');
+                }
+
+                gameState.stageResults[stage] = result;
+            }
+        }
+
+        function updateAllProgressIndicatorsForCriticalErrors() {
+            // Update all completed optimal stages to suboptimal when critical errors are present
+            gameState.stages.forEach(stage => {
+                if (gameState.stageResults[stage] === 'optimal') {
+                    const stageElement = document.querySelector(`[data-stage="${stage}"]`);
+                    if (stageElement && stageElement.classList.contains('completed-optimal')) {
+                        stageElement.classList.remove('completed-optimal');
+                        stageElement.classList.add('completed-suboptimal');
+                        gameState.stageResults[stage] = 'suboptimal';
+                    }
+                }
+            });
+        }
+
+        function setCurrentStage(stage) {
+            // Remove current class from all stages
+            document.querySelectorAll('.progress-stage').forEach(el => el.classList.remove('current'));
+
+            // Add current class to the specified stage
+            const stageElement = document.querySelector(`[data-stage="${stage}"]`);
+            if (stageElement && !stageElement.classList.contains('completed-optimal') &&
+                !stageElement.classList.contains('completed-second-attempt') &&
+                !stageElement.classList.contains('completed-suboptimal') &&
+                !stageElement.classList.contains('failed')) {
+                stageElement.classList.add('current');
+            }
+        }
+
+        // Scene to image mapping
+        const sceneImages = {
+            'scene_intro': { src: 'images/FloraSmartIoT_1.png', alt: 'Security dashboard alert' },
+            'scene_initial_alert': { src: 'images/FloraSmartIoT_2.png', alt: 'Multiple security alerts' },
+            'scene_immediate_response': { src: 'images/FloraSmartIoT_3.png', alt: 'Network isolation options' },
+            'scene_forensic_analysis': { src: 'images/FloraSmartIoT_4.png', alt: 'Forensic analysis results' },
+            'scene_scope_assessment': { src: 'images/FloraSmartIoT_5.png', alt: 'Network topology scan' },
+            'scene_threat_intelligence': { src: 'images/FloraSmartIoT_6.png', alt: 'Threat intelligence sources' },
+            'scene_incident_escalation': { src: 'images/FloraSmartIoT_7.png', alt: 'Executive briefing preparation' },
+            'scene_containment_strategy': { src: 'images/FloraSmartIoT_8.png', alt: 'Containment strategy options' },
+            'scene_eradication': { src: 'images/FloraSmartIoT_9.png', alt: 'Eradication planning' },
+            'scene_lessons_learned': { src: 'images/FloraSmartIoT_10.png', alt: 'Prevention strategy planning' },
+            'scene_final_report': { src: 'images/FloraSmartIoT_11.png', alt: 'Executive presentation' },
+            'scene_conclusion': { src: 'images/FloraSmartIoT_12.png', alt: 'Victory screen' }
+        };
+
+        function updateImage(sceneId) {
+            const imageData = sceneImages[sceneId];
+            if (imageData) {
+                const imageElement = document.querySelector('#current-image img');
+                if (imageElement) {
+                    imageElement.src = imageData.src;
+                    imageElement.alt = imageData.alt;
+                }
+            }
+        }
+
+        function updateCLI(sceneId, message = null) {
+            const cliOutput = document.querySelector('#cli-interface .cli-output');
+            if (!cliOutput) return;
+
+            const timestamp = new Date().toLocaleTimeString();
+            let cliMessage = '';
+
+            if (message) {
+                cliMessage = `<br><span class="cli-prompt">[${timestamp}] $</span> <span class="cli-command">${message}</span>`;
+            } else {
+                // Special handling for incident response initiation
+                if (sceneId === 'scene_initial_alert') {
+                    cliMessage = `<br><span class="cli-prompt">[${timestamp}] admin@soc:~$</span> <span class="cli-command">incident_response --initiate</span><br>`;
+                    cliMessage += `<span class="cli-warning">⚠ Incident response initiated</span><br>`;
+                    cliMessage += `<span class="cli-info">→ Analyzing security alerts...</span>`;
+                } else {
+                    // Default messages based on scene
+                    const sceneMessages = {
+                        'scene_intro': 'system_init --security-mode',
+                        'scene_immediate_response': 'network_isolate --target=smart_camera',
+                        'scene_forensic_analysis': 'forensics_scan --deep-analysis',
+                        'scene_scope_assessment': 'scope_assess --network-wide',
+                        'scene_threat_intelligence': 'threat_intel --query=apt-group',
+                        'scene_incident_escalation': 'escalate --level=executive',
+                        'scene_containment_strategy': 'deploy_honeypot --monitor=active',
+                        'scene_eradication': 'eradicate --coordinated-response',
+                        'scene_lessons_learned': 'implement_governance --policy-update',
+                        'scene_final_report': 'generate_report --exec-summary',
+                        'scene_conclusion': 'mission_complete --status=success'
+                    };
+
+                    const command = sceneMessages[sceneId] || 'status';
+                    cliMessage = `<br><span class="cli-prompt">[${timestamp}] admin@soc:~$</span> <span class="cli-command">${command}</span>`;
+                }
+            }
+
+            cliOutput.innerHTML += cliMessage;
+
+            // Auto-scroll to bottom
+            const cliInterface = document.getElementById('cli-interface');
+            cliInterface.scrollTop = cliInterface.scrollHeight;
+        }
+
+        function randomizeChoices(sceneId) {
+            const scene = document.getElementById(sceneId);
+            if (!scene) return;
+
+            const choicesContainer = scene.querySelector('.choices');
+            if (!choicesContainer) return;
+
+            const buttons = Array.from(choicesContainer.querySelectorAll('button'));
+            if (buttons.length <= 1) return;
+
+            // Check if we already have a saved order for this scene
+            if (gameState.sceneChoiceOrder[sceneId]) {
+                // Restore the saved order
+                const savedOrder = gameState.sceneChoiceOrder[sceneId];
+                choicesContainer.innerHTML = '';
+                savedOrder.forEach(buttonHtml => {
+                    choicesContainer.innerHTML += buttonHtml;
+                });
+            } else {
+                // First time visiting this scene - randomize and save the order
+                // Fisher-Yates shuffle algorithm
+                for (let i = buttons.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [buttons[i], buttons[j]] = [buttons[j], buttons[i]];
+                }
+
+                // Save the randomized order
+                gameState.sceneChoiceOrder[sceneId] = buttons.map(button => button.outerHTML);
+
+                // Clear container and re-add shuffled buttons
+                choicesContainer.innerHTML = '';
+                buttons.forEach(button => choicesContainer.appendChild(button));
+            }
+        }
+
+        function showScene(sceneId, skipCLI = false) {
+            const currentSceneElement = document.getElementById(gameState.currentScene);
+            const newSceneElement = document.getElementById(sceneId);
+
+            // If transitioning to a different scene
+            if (currentSceneElement && gameState.currentScene !== sceneId) {
+                // Start fade out current scene
+                currentSceneElement.classList.add('transitioning-out');
+
+                setTimeout(() => {
+                    // Hide current scene and show new one
+                    currentSceneElement.classList.remove('active', 'transitioning-out');
+                    newSceneElement.classList.add('active', 'transitioning-in');
+                    gameState.currentScene = sceneId;
+
+                    // Allow the new scene to fade in smoothly
+                    setTimeout(() => {
+                        newSceneElement.classList.remove('transitioning-in');
+                    }, 50); // Very short delay to ensure proper rendering
+
+                    // Update content after scene is visible
+                    updateSceneContent(sceneId, skipCLI);
+                }, 300);
+            } else {
+                // First scene or same scene - no transition needed
+                if (currentSceneElement) {
+                    currentSceneElement.classList.remove('active');
+                }
+                newSceneElement.classList.add('active');
+                gameState.currentScene = sceneId;
+                updateSceneContent(sceneId, skipCLI);
+            }
+        }
+
+        function updateSceneContent(sceneId, skipCLI) {
+            // Update left panel image
+            updateImage(sceneId);
+
+            // Update CLI interface only if not skipping
+            if (!skipCLI) {
+                updateCLI(sceneId);
+            }
+
+            // Randomize choice order for decision scenes
+            const decisionScenes = [
+                'scene_initial_alert', 'scene_immediate_response', 'scene_forensic_analysis',
+                'scene_scope_assessment', 'scene_threat_intelligence', 'scene_incident_escalation',
+                'scene_containment_strategy', 'scene_eradication', 'scene_lessons_learned', 'scene_final_report'
+            ];
+
+            if (decisionScenes.includes(sceneId)) {
+                randomizeChoices(sceneId);
+            }
+
+            // Update progress indicator based on scene
+            const sceneToStageMap = {
+                'scene_initial_alert': 'initial',
+                'scene_immediate_response': 'response',
+                'scene_forensic_analysis': 'forensics',
+                'scene_scope_assessment': 'scope',
+                'scene_threat_intelligence': 'intelligence',
+                'scene_incident_escalation': 'escalation',
+                'scene_containment_strategy': 'containment',
+                'scene_eradication': 'eradication',
+                'scene_lessons_learned': 'prevention',
+                'scene_final_report': 'report'
+            };
+
+            if (sceneToStageMap[sceneId]) {
+                setCurrentStage(sceneToStageMap[sceneId]);
+            }
+
+            // Update final score display if reaching conclusion
+            if (sceneId === 'scene_conclusion') {
+                const finalScoreElement = document.getElementById('final-score');
+                if (finalScoreElement) {
+                    finalScoreElement.textContent = gameState.score;
+                }
+            }
+        }
+
+        function updateScore(points) {
+            gameState.score += points;
+            scoreDisplay.textContent = `Score: ${gameState.score}`;
+        }
+
+        function showModal(title, message, type, nextScene) {
+            modalTitle.textContent = title;
+            modalMessage.innerHTML = message;
+            modalContent.className = `modal-content ${type}-modal`;
+            modal.style.display = 'flex';
+
+            const newBtn = document.getElementById('modal-close-btn');
+            newBtn.onclick = () => {
+                modal.style.display = 'none';
+                if (nextScene) showScene(nextScene, true); // Skip CLI update when transitioning after choice
+            };
+        }
+
+        function showDisaster(message, returnScene) {
+            disasterText.innerHTML = message;
+            disasterBtn.onclick = () => showScene(returnScene, true); // Skip CLI update when returning from disaster
+            showScene('scene_disaster');
+        }
+
+        function updateCLIWithChoice(phase, choice) {
+            const cliChoiceMessages = {
+                initial: {
+                    correct: { cmd: "alert_priority --target=executive_smart_camera --status=CRITICAL", msg: "High-value target with audio surveillance capability identified in executive conference room" },
+                    wrong1: { cmd: "alert_priority --target=smart_bulbs --status=medium", msg: "50 smart bulbs flagged for investigation" },
+                    wrong2: { cmd: "alert_priority --target=lobby_cameras --status=low", msg: "Security cameras in lobby area under review" }
+                },
+                response: {
+                    correct: { cmd: "isolate_device --method=vlan --preserve_evidence=true", msg: "Device isolated with evidence preservation protocols" },
+                    wrong1: { cmd: "device_action --method=physical_disconnect --evidence=lost", msg: "Physical disconnection executed - audio evidence compromised" },
+                    wrong2: { cmd: "firewall_block --target=smart_camera --intelligence=blocked", msg: "Network traffic blocked at firewall level" }
+                },
+                forensics: {
+                    correct: { cmd: "threat_assessment --level=nation_state --zero_day=confirmed --microphone_exploit=active", msg: "Advanced persistent threat detected - zero-day exploit targeting microphone firmware for covert audio surveillance" },
+                    good1: { cmd: "threat_assessment --level=basic --attack_vector=credentials", msg: "Credential-based attack vector identified" },
+                    good2: { cmd: "threat_assessment --level=intermediate --attack_vector=mitm", msg: "Man-in-the-middle attack pattern detected" }
+                },
+                scope: {
+                    correct: { cmd: "network_scan --scope=full --pattern_match=enabled --audio_devices=priority", msg: "Comprehensive network analysis targeting microphone-enabled IoT devices initiated" },
+                    wrong1: { cmd: "device_scan --scope=manufacturer --limited=true", msg: "Limited scan targeting specific device manufacturer" },
+                    wrong2: { cmd: "scan_mode --reactive --wait_for_alerts=true", msg: "Passive monitoring mode activated" }
+                },
+                intelligence: {
+                    correct: { cmd: "threat_intel --source=industry_sharing --malware_family=ThermalSnake", msg: "ThermalSnake backdoor family identified via threat intelligence - IoT-targeted malware" },
+                    good1: { cmd: "research --source=cve_database --method=manual", msg: "Manual CVE database research initiated" },
+                    good2: { cmd: "malware_analysis --method=reverse_engineer --time=extended", msg: "Reverse engineering analysis started" }
+                },
+                escalation: {
+                    correct: { cmd: "escalate --legal_counsel=engaged --compliance=active", msg: "Legal counsel engaged for nation-state incident" },
+                    wrong1: { cmd: "device_replace --legal_review=bypassed --evidence=destroyed", msg: "Immediate device replacement protocol executed" },
+                    wrong2: { cmd: "incident_hide --disclosure=avoided --risk=critical", msg: "Incident containment without disclosure initiated" }
+                },
+                containment: {
+                    correct: { cmd: "deploy_honeypot --monitor=active --isolation=critical_only", msg: "Honeypot deployed for threat actor monitoring" },
+                    wrong1: { cmd: "network_block --scope=all_iot --detection_alert=high", msg: "Complete IoT network isolation executed" },
+                    wrong2: { cmd: "factory_reset --evidence=destroyed --vulnerability=unpatched", msg: "Factory reset protocol applied to all devices" }
+                },
+                eradication: {
+                    correct: { cmd: "cleanup --method=coordinated --timing=simultaneous", msg: "Coordinated threat eradication across all systems" },
+                    wrong1: { cmd: "cleanup --method=sequential --risk=adaptation", msg: "Sequential cleanup process initiated" },
+                    wrong2: { cmd: "network_shutdown --scope=full --business_impact=critical", msg: "Emergency network shutdown procedures activated" }
+                },
+                prevention: {
+                    correct: { cmd: "governance --iot_lifecycle=comprehensive --procurement_security=enabled --segmentation_standards=enforced --end_of_life_planning=active", msg: "Comprehensive IoT governance framework implementation initiated" },
+                    wrong1: { cmd: "security_software --iot_compatibility=limited", msg: "Endpoint protection deployment to IoT devices" },
+                    wrong2: { cmd: "training_program --scope=human_only --iot_gaps=present", msg: "Mandatory security training program scheduled" }
+                },
+                report: {
+                    correct: { cmd: "executive_brief --focus=business_impact --strategy=included", msg: "Executive summary with strategic recommendations prepared" },
+                    good1: { cmd: "technical_report --focus=zero_day --audience=technical", msg: "Technical analysis report generated" },
+                    good2: { cmd: "team_summary --focus=performance --strategy=limited", msg: "Team performance summary compiled" }
+                }
+            };
+
+            const choiceData = cliChoiceMessages[phase]?.[choice] || { cmd: `action_${choice} --phase=${phase}`, msg: "Action executed" };
+            const timestamp = new Date().toLocaleTimeString();
+
+            // First show the command execution
+            let cliMessage = `<br><span class="cli-prompt">[${timestamp}] admin@soc:~$</span> <span class="cli-command">${choiceData.cmd}</span><br>`;
+            cliMessage += `<span class="cli-info">${choiceData.msg}</span><br>`;
+
+            // Then show the status
+            let status = '';
+            if (choice === 'correct') {
+                status = '<span class="cli-success">✓ OPTIMAL - Best practice executed</span>';
+            } else if (choice.startsWith('good')) {
+                status = '<span class="cli-warning">◐ SUBOPTIMAL - Acceptable but not ideal</span>';
+            } else {
+                status = '<span class="cli-error">✗ CRITICAL - Significant security risk introduced</span>';
+            }
+
+            cliMessage += status;
+
+            const cliOutput = document.querySelector('#cli-interface .cli-output');
+            if (cliOutput) {
+                cliOutput.innerHTML += cliMessage;
+
+                // Add "Awaiting next instruction" after a short delay
+                setTimeout(() => {
+                    const followUpTimestamp = new Date().toLocaleTimeString();
+                    const awaitingMessage = `<br><span class="cli-prompt">[${followUpTimestamp}] system:</span> <span class="cli-info">Awaiting next instruction...</span>`;
+                    cliOutput.innerHTML += awaitingMessage;
+
+                    // Auto-scroll to bottom
+                    const cliInterface = document.getElementById('cli-interface');
+                    cliInterface.scrollTop = cliInterface.scrollHeight;
+                }, 1000);
+
+                // Auto-scroll to bottom immediately
+                const cliInterface = document.getElementById('cli-interface');
+                cliInterface.scrollTop = cliInterface.scrollHeight;
+            }
+        } function handleChoice(phase, choice) {
+            // Initialize attempt count for this phase if not exists
+            if (!gameState.attemptCounts[phase]) {
+                gameState.attemptCounts[phase] = 0;
+            }
+
+            // Increment attempt count
+            gameState.attemptCounts[phase]++;
+
+            const isFirstAttempt = gameState.attemptCounts[phase] === 1;
+
+            // Track first attempt result
+            if (isFirstAttempt) {
+                gameState.firstAttemptResults[phase] = choice;
+            }
+
+            gameState.attempts[phase] = true;
+
+            const content = {
+                initial: {
+                    correct: { title: "Critical Priority Identified!", msg: "Executive conference rooms contain the most sensitive corporate information. A smart camera with a voice control microphone in this location communicating with hostile nations is a clear audio espionage threat - the legitimate voice control feature has been weaponized to record every confidential conversation!", points: 100, next: 'scene_immediate_response' },
+                    wrong1: { msg: "While 50 devices is concerning, smart bulbs typically have limited attack surfaces. Meanwhile, sensitive merger discussions are potentially being recorded and transmitted through the compromised smart camera's voice control microphone. <strong>Wrong Priority!</strong>", next: 'scene_initial_alert' },
+                    wrong2: { msg: "Lobby cameras are important but contain no confidential business information. The executive conference room smart camera with its voice control microphone could expose multi-million dollar deals through audio surveillance. <strong>Wrong Priority!</strong>", next: 'scene_initial_alert' }
+                },
+                response: {
+                    correct: { title: "Perfect Evidence Preservation!", msg: "Isolation maintains network visibility while preserving volatile memory, audio recordings, and logs for forensic analysis. You can still monitor the attacker's behavior and recover intercepted conversations.", points: 100, next: 'scene_forensic_analysis' },
+                    wrong1: { msg: "Unplugging destroys all volatile evidence, RAM contents, and any cached audio recordings that could reveal what conversations were intercepted. <strong>Audio Evidence Lost Forever!</strong>", next: 'scene_immediate_response' },
+                    wrong2: { msg: "Blocking traffic might stop audio transmission but provides no forensic value and could alert sophisticated attackers to your response. <strong>Missed Intelligence Opportunity!</strong>", next: 'scene_immediate_response' }
+                },
+                forensics: {
+                    correct: { title: "Advanced Persistent Threat Identified!", msg: "Zero-day exploits that specifically target microphone firmware indicate nation-state level resources and capabilities. This vulnerability was custom-developed to enable covert audio surveillance through IoT devices. This is not a script kiddie.", points: 100, next: 'scene_scope_assessment' },
+                    good1: { title: "Common Attack Vector", msg: "Default credentials are indeed common, but the sophisticated microphone exploitation suggests a more advanced threat actor with custom audio surveillance tools.", points: 60, next: 'scene_scope_assessment' },
+                    good2: { title: "Sophisticated, But...", msg: "MITM during updates shows skill, but the zero-day microphone exploit indicates even higher-level threat actor capabilities specifically targeting audio surveillance.", points: 80, next: 'scene_scope_assessment' }
+                },
+                scope: {
+                    correct: { title: "Comprehensive Threat Hunting!", msg: "Network-wide analysis for microphone-enabled devices reveals the true scope of the audio surveillance operation. Your scan discovers 23 additional compromised IoT devices with microphone capabilities - smart speakers, security cameras with audio, and voice-controlled systems all compromised by the same zero-day exploit.", points: 100, next: 'scene_threat_intelligence' },
+                    wrong1: { msg: "Limiting scope to same manufacturer misses cross-platform attacks targeting microphone-enabled devices. The zero-day exploit may affect multiple device types with audio capabilities. <strong>Audio Surveillance Scope Underestimated!</strong>", next: 'scene_scope_assessment' },
+                    wrong2: { msg: "Waiting for alerts is reactive when dealing with covert audio surveillance. Proactive hunting for microphone-enabled devices would reveal the full extent of the listening operation immediately. <strong>Audio Espionage Continues!</strong>", next: 'scene_scope_assessment' }
+                },
+                intelligence: {
+                    correct: { title: "Rapid Threat Attribution!", msg: "Industry intelligence sharing reveals this is the 'ThermalSnake' backdoor family - a sophisticated IoT malware strain that specifically exploits zero-day vulnerabilities in microphone-enabled devices. Nation-state actors use it for corporate espionage through covert audio surveillance. Attack patterns, microphone exploitation techniques, and defensive countermeasures are already documented.", points: 100, next: 'scene_incident_escalation' },
+                    good1: { title: "Valuable, But Slow", msg: "CVE research provides context but won't give you real-time threat actor attribution or current audio surveillance tactics being used.", points: 70, next: 'scene_incident_escalation' },
+                    good2: { title: "Thorough, But Time-Consuming", msg: "Reverse engineering is valuable but takes days. You need immediate actionable intelligence while audio surveillance is potentially active.", points: 50, next: 'scene_incident_escalation' }
+                },
+                escalation: {
+                    correct: { title: "Proper Legal Framework!", msg: "Nation-state attacks involving audio surveillance trigger strict regulatory requirements. Legal counsel ensures compliance with privacy laws, disclosure requirements, and protects attorney-client privilege for intercepted conversations.", points: 100, next: 'scene_containment_strategy' },
+                    wrong1: { msg: "Device replacement without legal consultation could destroy audio evidence needed for law enforcement and regulatory reporting regarding privacy breaches. <strong>Legal Compliance Failed!</strong>", next: 'scene_incident_escalation' },
+                    wrong2: {
+                        msg: "🚨 <strong>CRITICAL ERROR - MISSION FAILED!</strong><br><br>Audio surveillance by nation-states requires immediate disclosure to affected parties and regulators under privacy laws. By keeping this internal, you've:<br>• Violated federal privacy reporting requirements<br>• Exposed the company to massive regulatory fines<br>• Failed to notify individuals whose conversations were intercepted<br>• Created potential criminal liability for executives<br>• Failed your duty as a security professional<br><br>This decision alone could destroy the company financially and legally.<br><br><strong>Score Penalty: -500 points</strong>",
+                        next: 'scene_incident_escalation',
+                        penalty: true
+                    }
+                },
+                containment: {
+                    correct: { title: "Strategic Containment!", msg: "Honeypots provide continued intelligence while protecting critical systems. You can observe attacker tactics, techniques, and procedures.", points: 100, next: 'scene_eradication' },
+                    wrong1: { msg: "Blocking all IoT access might stop the attack but alerts sophisticated attackers that they've been detected. <strong>Lost Intelligence Opportunity!</strong>", next: 'scene_containment_strategy' },
+                    wrong2: { msg: "Factory resets destroy all forensic evidence and don't address the underlying vulnerability. <strong>Evidence Destroyed!</strong>", next: 'scene_containment_strategy' }
+                },
+                eradication: {
+                    correct: { title: "Coordinated Response!", msg: "Simultaneous cleanup prevents attackers from adapting or moving to backup systems. Your honeypot intelligence reveals they have 3 additional entry points.", points: 100, next: 'scene_lessons_learned' },
+                    wrong1: { msg: "Sequential cleanup gives attackers time to adapt and establish persistence in other systems. <strong>Attackers Evolved!</strong>", next: 'scene_eradication' },
+                    wrong2: { msg: "Network shutdown causes massive business disruption. Targeted response is more effective than nuclear option. <strong>Business Impact!</strong>", next: 'scene_eradication' }
+                },
+                prevention: {
+                    correct: { title: "Strategic Security Governance!", msg: "Comprehensive IoT lifecycle management addresses the root cause - unmanaged IoT deployment. This prevents future incidents through systematic controls, procurement security, proper segmentation, and end-of-life planning.", points: 100, next: 'scene_final_report' },
+                    wrong1: { msg: "Endpoint protection is useful but many IoT devices can't run traditional security software. <strong>Technical Solution Insufficient!</strong>", next: 'scene_lessons_learned' },
+                    wrong2: { msg: "Training is important but doesn't address autonomous IoT device vulnerabilities or deployment controls. <strong>Human Solution Insufficient!</strong>", next: 'scene_lessons_learned' }
+                },
+                report: {
+                    correct: { title: "Executive Excellence!", msg: "Business leaders need strategic context, not technical details. Your comprehensive approach demonstrates mature security leadership.", points: 100, next: 'scene_conclusion' },
+                    good1: { title: "Technical Accuracy", msg: "Technical details are important but executives need business impact context and strategic recommendations for decision-making.", points: 70, next: 'scene_conclusion' },
+                    good2: { title: "Good Team Leadership", msg: "Celebrating success is important, but executives need forward-looking strategy and lessons learned for future investment decisions.", points: 80, next: 'scene_conclusion' }
+                }
+            };
+
+            const phaseContent = content[phase];
+
+            // Update CLI with the choice made
+            updateCLIWithChoice(phase, choice);
+
+            // Update progress indicator IMMEDIATELY based on attempt count and choice result
+            let result;
+            const attemptCount = gameState.attemptCounts[phase];
+
+            if (choice === 'correct' && attemptCount === 1) {
+                result = 'optimal';  // Green - first attempt correct
+            } else if (choice === 'correct' && attemptCount === 2) {
+                result = 'second-attempt';  // Yellow - correct on second attempt
+            } else if (choice === 'correct' && attemptCount > 2) {
+                result = 'suboptimal';  // Orange - correct after multiple attempts
+            } else if (choice.startsWith('good') && attemptCount === 1) {
+                result = 'second-attempt';  // Yellow - acceptable choice on first attempt
+            } else if (choice.startsWith('good')) {
+                result = 'suboptimal';  // Orange - acceptable choice after wrong attempts
+            } else {
+                // Wrong choice - don't update progress indicator until they get it right
+                result = null;
+            }
+
+            if (result) {
+                updateProgressIndicator(phase, result);
+            }
+
+            if (choice === 'correct' || choice.startsWith('good')) {
+                const points = isFirstAttempt ? phaseContent[choice].points : Math.floor(phaseContent[choice].points / 2);
+                updateScore(points);
+                const modalType = choice === 'correct' ? 'correct' : 'hint';
+                const message = `${phaseContent[choice].msg}<br><br>You earned ${points} points!`;
+
+                showModal(phaseContent[choice].title, message, modalType, phaseContent[choice].next);
+            } else { // It's a disaster
+                // Check if this is a critical penalty scenario
+                if (phaseContent[choice].penalty) {
+                    // Apply severe penalty
+                    updateScore(-500);
+                    gameState.criticalErrors++;
+
+                    // Mark this stage as failed in progress indicator
+                    updateProgressIndicator(phase, 'failed');
+
+                    // Show disaster with penalty information
+                    showDisaster(phaseContent[choice].msg, phaseContent[choice].next);
+                } else {
+                    // Regular disaster - just continue without updating progress indicator until they get it right
+                    showDisaster(phaseContent[choice].msg, phaseContent[choice].next);
+                }
+            }
+        }
+
+        function restartGame() {
+            gameState.score = 0;
+            gameState.attempts = {};
+            gameState.attemptCounts = {};
+            gameState.stageResults = {};
+            gameState.firstAttemptResults = {};
+            gameState.criticalErrors = 0;
+            gameState.sceneChoiceOrder = {};
+            gameState.currentStageIndex = 0;
+            scoreDisplay.textContent = 'Score: 0';
+
+            // Reset progress indicator
+            document.querySelectorAll('.progress-stage').forEach(stage => {
+                stage.classList.remove('completed-optimal', 'completed-second-attempt', 'completed-suboptimal', 'failed', 'current');
+            });
+            document.querySelector('[data-stage="initial"]').classList.add('current');
+
+            showScene('scene_intro');
+        }
+    </script>
+
+    <div id="footer">
+        <div class="footer-line">
+            Designed by <a href="https://linkedin.com/in/gouthamn" target="_blank">Goutham Nanjundaswamy</a>
+        </div>
+        <div class="footer-line">
+            This game [Open sourced] is part of the Session 15 of<br>Cyber Security Champions 2.0 Workshop.
+        </div>
+        <div class="footer-line">
+            Available at <a href="https://github.com/ethnus/" target="_blank">https://github.com/ethnus/</a>
+        </div>
+    </div>
+</body>
+
+</html>
